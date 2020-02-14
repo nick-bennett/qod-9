@@ -1,8 +1,9 @@
 package edu.cnm.deepdive.qod.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -24,11 +25,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.lang.NonNull;
 
 @Entity
-@Table(
-    indexes = {
-        @Index(columnList = "created")
-    }
-)
+@Table(indexes = @Index(columnList = "created"))
 public class Quote {
 
   @NonNull
@@ -54,21 +51,18 @@ public class Quote {
   @Column(length = 4096, nullable = false, unique = true)
   private String text;
 
+  @JsonIgnore
   @NonNull
   @ManyToMany(
       fetch = FetchType.LAZY,
       cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH}
   )
   @JoinTable(
-      joinColumns = {
-          @JoinColumn(name = "quote_id")
-      },
-      inverseJoinColumns = {
-          @JoinColumn(name = "source_id")
-      }
+      joinColumns = @JoinColumn(name = "quote_id"),
+      inverseJoinColumns = @JoinColumn(name = "source_id")
   )
   @OrderBy("name ASC")
-  private List<Source> sources = new LinkedList<>();
+  private Set<Source> sources = new LinkedHashSet<>();
 
   @NonNull
   public UUID getId() {
@@ -95,8 +89,25 @@ public class Quote {
   }
 
   @NonNull
-  public List<Source> getSources() {
+  public Set<Source> getSources() {
     return sources;
+  }
+
+  @Override
+  public int hashCode() {
+    return 31 * id.hashCode() + text.hashCode(); // TODO Avoid recomputing this unnecessarily.
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    boolean result = false;
+    if (obj == this) {
+      result = true;
+    } else if (obj instanceof Quote && obj.hashCode() == hashCode()) {
+      Quote other = (Quote) obj;
+      result = other.id.equals(id) && other.text.equals(text);
+    }
+    return result;
   }
 
 }
