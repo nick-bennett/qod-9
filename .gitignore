@@ -33,5 +33,5 @@ build/
 
 /qod_db
 derby.log
-#.floo
-#.flooignore
+.floo
+.flooignore
