@@ -8,4 +8,8 @@ public interface QuoteRepository extends JpaRepository<Quote, UUID> {
 
   Iterable<Quote> getAllByOrderByCreatedDesc();
 
+  default Quote findOrFail(UUID id) {
+    return findById(id).get();
+  }
+
 }

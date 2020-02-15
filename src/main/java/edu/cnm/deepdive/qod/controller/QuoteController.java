@@ -1,5 +1,7 @@
 package edu.cnm.deepdive.qod.controller;
 
+import static edu.cnm.deepdive.qod.controller.QuoteController.BASE_PATH;
+
 import edu.cnm.deepdive.qod.model.entity.Quote;
 import edu.cnm.deepdive.qod.model.entity.Source;
 import edu.cnm.deepdive.qod.service.QuoteRepository;
@@ -7,6 +9,7 @@ import edu.cnm.deepdive.qod.service.SourceRepository;
 import java.net.URI;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.server.ExposesResourceFor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +25,18 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
-@RequestMapping("quotes")
+@RequestMapping(BASE_PATH)
+@ExposesResourceFor(Quote.class)
 public class QuoteController {
+
+  static final String ITEM_NAME = "quote";
+  static final String COLLECTION_NAME = ITEM_NAME + "s";
+  static final String BASE_PATH = "/" + COLLECTION_NAME;
+  private final String ID_VARIABLE = "id";
+  private final String ID_PATH = "/{" + ID_VARIABLE + "}";
+  private final String TEXT_PATH = ID_PATH + "/text";
+  private final String SOURCE_ATTACHMENT_PATH =
+      ID_PATH + "/" + SourceController.COLLECTION_NAME + "/{sourceId}";
 
   private final QuoteRepository quoteRepository;
   private final SourceRepository sourceRepository;
@@ -49,55 +62,52 @@ public class QuoteController {
     return quoteRepository.getAllByOrderByCreatedDesc();
   }
 
-  @GetMapping(value = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(value = ID_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
   public Quote get(@PathVariable UUID id) {
-    return quoteRepository.findById(id).get();
+    return quoteRepository.findOrFail(id);
   }
 
-  @PutMapping(value = "{id}",
+  @DeleteMapping(value = ID_PATH)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable UUID id) {
+    quoteRepository.findById(id).ifPresent(quoteRepository::delete);
+  }
+
+  @PutMapping(value = ID_PATH,
       consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public Quote put(@PathVariable UUID id, @RequestBody Quote modifiedQuote) {
-    Quote quote = get(id);
+    Quote quote = quoteRepository.findOrFail(id);
     quote.setText(modifiedQuote.getText());
     return quoteRepository.save(quote);
   }
 
-  @PutMapping(value = "{id}/text",
+  @PutMapping(value = TEXT_PATH,
       consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
   public String put(@PathVariable UUID id, @RequestBody String modifiedQuote) {
-    Quote quote = get(id);
+    Quote quote = quoteRepository.findOrFail(id);
     quote.setText(modifiedQuote);
     quoteRepository.save(quote);
     return quote.getText();
   }
 
-  @DeleteMapping(value = "{id}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable UUID id) {
-    // Code below throws NoSuchElementException if id is not in database.
-//    Quote quote = get(id);
-//    quoteRepository.delete(quote);
-    quoteRepository.findById(id).ifPresent(quoteRepository::delete);
-  }
-
-  @PutMapping(value = "{quoteId}/sources/{sourceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-  public Quote attach(@PathVariable UUID quoteId, @PathVariable UUID sourceId) {
-    Quote quote = get(quoteId);
-    Source source = sourceRepository.findById(sourceId).get();
+  @PutMapping(value = SOURCE_ATTACHMENT_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
+  public Quote attach(@PathVariable(ID_VARIABLE) UUID quoteId, @PathVariable UUID sourceId) {
+    Quote quote = quoteRepository.findOrFail(quoteId);
+    Source source = sourceRepository.findOrFail(sourceId);
     if (quote.getSources().add(source)) {
       quoteRepository.save(quote);
     }
     return quote;
   }
 
-  @DeleteMapping(value = "{quoteId}/sources/{sourceId}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void detach(@PathVariable UUID quoteId, @PathVariable UUID sourceId) {
-    Quote quote = get(quoteId);
-    Source source = sourceRepository.findById(sourceId).get();
+  @DeleteMapping(value = SOURCE_ATTACHMENT_PATH)
+  public Quote detach(@PathVariable(ID_VARIABLE) UUID quoteId, @PathVariable UUID sourceId) {
+    Quote quote = quoteRepository.findOrFail(quoteId);
+    Source source = sourceRepository.findOrFail(sourceId);
     if (quote.getSources().remove(source)) {
       quoteRepository.save(quote);
     }
+    return quote;
   }
 
 }

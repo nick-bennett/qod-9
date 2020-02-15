@@ -8,4 +8,8 @@ public interface SourceRepository extends JpaRepository<Source, UUID> {
 
   Iterable<Source> findAllByOrderByName();
 
+  default Source findOrFail(UUID id) {
+    return findById(id).get();
+  }
+
 }
