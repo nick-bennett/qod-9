@@ -29,9 +29,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @ExposesResourceFor(Quote.class)
 public class QuoteController {
 
-  static final String ITEM_NAME = "quote";
-  static final String COLLECTION_NAME = ITEM_NAME + "s";
-  static final String BASE_PATH = "/" + COLLECTION_NAME;
+  public static final String ITEM_NAME = "quote";
+  public static final String COLLECTION_NAME = ITEM_NAME + "s";
+  public static final String BASE_PATH = "/" + COLLECTION_NAME;
   private final String ID_VARIABLE = "id";
   private final String ID_PATH = "/{" + ID_VARIABLE + "}";
   private final String TEXT_PATH = ID_PATH + "/text";
@@ -90,24 +90,24 @@ public class QuoteController {
     return quote.getText();
   }
 
+  @GetMapping(value = TEXT_PATH, produces = MediaType.TEXT_PLAIN_VALUE)
+  public String getText(@PathVariable UUID id) {
+    Quote quote = quoteRepository.findOrFail(id);
+    return quote.getText();
+  }
+
   @PutMapping(value = SOURCE_ATTACHMENT_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
   public Quote attach(@PathVariable(ID_VARIABLE) UUID quoteId, @PathVariable UUID sourceId) {
     Quote quote = quoteRepository.findOrFail(quoteId);
     Source source = sourceRepository.findOrFail(sourceId);
-    if (quote.getSources().add(source)) {
-      quoteRepository.save(quote);
-    }
-    return quote;
+    return quoteRepository.attach(quote, source);
   }
 
   @DeleteMapping(value = SOURCE_ATTACHMENT_PATH)
   public Quote detach(@PathVariable(ID_VARIABLE) UUID quoteId, @PathVariable UUID sourceId) {
     Quote quote = quoteRepository.findOrFail(quoteId);
     Source source = sourceRepository.findOrFail(sourceId);
-    if (quote.getSources().remove(source)) {
-      quoteRepository.save(quote);
-    }
-    return quote;
+    return quoteRepository.detach(quote, source);
   }
 
 }

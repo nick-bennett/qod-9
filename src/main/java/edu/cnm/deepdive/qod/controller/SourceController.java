@@ -27,9 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 @ExposesResourceFor(Source.class)
 public class SourceController {
 
-  static final String ITEM_NAME = "source";
-  static final String COLLECTION_NAME = ITEM_NAME + "s";
-  static final String BASE_PATH = "/" + COLLECTION_NAME;
+  public static final String ITEM_NAME = "source";
+  public static final String COLLECTION_NAME = ITEM_NAME + "s";
+  public static final String BASE_PATH = "/" + COLLECTION_NAME;
   private final String ID_VARIABLE = "id";
   private final String ID_PATH = "/{" + ID_VARIABLE + "}";
   private final String NAME_PATH = ID_PATH + "/name";
@@ -57,12 +57,12 @@ public class SourceController {
     return sourceRepository.findAllByOrderByName();
   }
 
-  @GetMapping(value = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(value = ID_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
   public Source get(@PathVariable UUID id) {
     return sourceRepository.findOrFail(id);
   }
 
-  @DeleteMapping(value = "{id}")
+  @DeleteMapping(value = ID_PATH)
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@PathVariable UUID id) {
     sourceRepository.findById(id).ifPresent((source) -> {
@@ -73,7 +73,7 @@ public class SourceController {
     });
   }
 
-  @PutMapping(value = "{id}",
+  @PutMapping(value = ID_PATH,
       consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public Source put(@PathVariable UUID id, @RequestBody Source updated) {
     Source source = sourceRepository.findOrFail(id);
@@ -90,14 +90,18 @@ public class SourceController {
     return source.getName();
   }
 
+  @GetMapping(value = NAME_PATH, produces = MediaType.TEXT_PLAIN_VALUE)
+  public String getName(@PathVariable UUID id) {
+    Source source = sourceRepository.findOrFail(id);
+    return source.getName();
+  }
+
   @PutMapping(value = QUOTE_ATTACHMENT_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
   public Source attach(@PathVariable(ID_VARIABLE) UUID sourceId, @PathVariable UUID quoteId) {
     Source source = sourceRepository.findOrFail(sourceId);
     Quote quote = quoteRepository.findOrFail(quoteId);
-    if (quote.getSources().add(source)) {
-      source.getQuotes().add(quote);
-      quoteRepository.save(quote);
-    }
+    source.getQuotes().add(quote);
+    quoteRepository.attach(quote, source);
     return source;
   }
 
@@ -105,10 +109,8 @@ public class SourceController {
   public Source detach(@PathVariable(ID_VARIABLE) UUID sourceId, @PathVariable UUID quoteId) {
     Source source = sourceRepository.findOrFail(sourceId);
     Quote quote = quoteRepository.findOrFail(quoteId);
-    if (quote.getSources().remove(source)) {
-      source.getQuotes().remove(quote);
-      quoteRepository.save(quote);
-    }
+    source.getQuotes().remove(quote);
+    quoteRepository.detach(quote, source);
     return source;
   }
 
